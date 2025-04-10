@@ -10,7 +10,7 @@ while True:
 
     cv2.imshow("Test Window", frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):  # Press 'q' to exit
+    if cv2.waitKey(1) & 0xFF == ord('q'):  
         break
 
 cam.release()

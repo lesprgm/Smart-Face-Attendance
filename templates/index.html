@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/index.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="display-4">Face Recognition Attendance System</h1>
+            <p class="lead">Real-time face detection and attendance tracking</p>
+        </div>
+
+        <div class="video-container" id="videoContainer" style="display: none;">
+            <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Video Feed">
+        </div>
+
+        <div class="status-container">
+            <h3>System Status</h3>
+            <div id="statusMessage">Loading status...</div>
+        </div>
+
+        <div class="attendance-controls">
+            <button id="startBtn" class="btn btn-primary">Start Camera</button>
+            <button id="stopBtn" class="btn btn-danger" style="display: none;">Stop Camera</button>
+        </div>
+
+        <div class="attendance-list" id="attendanceList">
+            <div class="attendance-item">Loading attendance...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+</html>
