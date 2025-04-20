@@ -5,7 +5,7 @@ cam = cv2.VideoCapture(0)
 while True:
     ret, frame = cam.read()
     if not ret:
-        print("Error: Failed to grab frame")
+        print("Error: Camera is not working")
         break
 
     cv2.imshow("Test Window", frame)
