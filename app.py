@@ -1,145 +1,218 @@
-import qrcode
-from flask import Flask, render_template, Response, request, redirect, url_for, send_file
+from flask import Flask, render_template, Response, request, redirect, url_for, jsonify, send_from_directory, session
 import cv2
+import os
+from datetime import datetime
+import json
 import face_recognition
 import numpy as np
-import os
-import sqlite3
-import math
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads/'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.secret_key = os.urandom(24)
 
-# Initialize attendance database
-def init_db():
-    conn = sqlite3.connect('attendance.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS attendance (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                    name TEXT, 
-                    confidence TEXT, 
-                    time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# Function to calculate confidence level
-def face_confidence(face_distance, face_match_threshold=0.6):
-    range_val = (1.0 - face_match_threshold)
-    linear_val = (1.0 - face_distance) / (range_val * 2.0)
-
-    if face_distance > face_match_threshold:
-        return str(round(linear_val * 100, 2)) + '%'
-    else:
-        value = (linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))) * 100
-        return str(round(value, 2)) + '%'
-
-# Load known faces
 known_face_encodings = []
 known_face_names = []
 
-def encode_faces():
-    known_face_encodings.clear()
-    known_face_names.clear()
+def load_known_faces():
+    global known_face_encodings, known_face_names
+    known_face_encodings = []
+    known_face_names = []
+    
+    faces_dir = 'faces'
+    if not os.path.exists(faces_dir):
+        os.makedirs(faces_dir)
+    
+    for filename in os.listdir(faces_dir):
+        if filename.endswith('.jpg'):
+            name = filename[:-4]
+            image_path = os.path.join(faces_dir, filename)
+            print(f"Loading face: {image_path}")
+            
+            image = face_recognition.load_image_file(image_path)
+            face_encodings = face_recognition.face_encodings(image)
+            
+            if face_encodings:
+                known_face_encodings.append(face_encodings[0])
+                known_face_names.append(name)
+                print(f"Successfully loaded face: {name}")
+            else:
+                print(f"No face detected in: {filename}")
 
-    for image in os.listdir(UPLOAD_FOLDER):
-        face_image = face_recognition.load_image_file(f'{UPLOAD_FOLDER}{image}')
-        face_encoding = face_recognition.face_encodings(face_image)
-        if face_encoding:
-            known_face_encodings.append(face_encoding[0])
-            known_face_names.append(os.path.splitext(image)[0])
+load_known_faces()
 
-encode_faces()
+video_capture = None
+last_attendance_check = {}
 
-# Capture video from webcam
-video_capture = cv2.VideoCapture(0)
-
-def log_attendance(name, confidence):
-    conn = sqlite3.connect('attendance.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO attendance (name, confidence) VALUES (?, ?)", (name, confidence))
-    conn.commit()
-    conn.close()
+def get_video_capture():
+    global video_capture
+    if video_capture is None:
+        video_capture = cv2.VideoCapture(0)
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    return video_capture
 
 def generate_frames():
+    frame_count = 0
     while True:
-        success, frame = video_capture.read()
-        if not success:
+        video_capture = get_video_capture()
+        ret, frame = video_capture.read()
+        if not ret:
             break
-        else:
-            small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-            rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+            
+        frame_count += 1
+        if frame_count % 2 != 0:
+            continue
+            
+        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        
+        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+            top *= 2
+            right *= 2
+            bottom *= 2
+            left *= 2
+            
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            name = "Unknown"
+            
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_face_names[first_match_index]
+                
+                current_time = datetime.now()
+                if name not in last_attendance_check or \
+                   (current_time - last_attendance_check[name]).total_seconds() > 300:
+                    record_attendance(name)
+                    last_attendance_check[name] = current_time
+                    print(f"Recording attendance for {name}")
+            
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 255, 0), cv2.FILLED)
+            font = cv2.FONT_HERSHEY_DUPLEX
+            cv2.putText(frame, name, (left + 6, bottom - 6), font, 0.5, (255, 255, 255), 1)
+        
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-            face_locations = face_recognition.face_locations(rgb_small_frame)
-            face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-            face_names = []
-            for face_encoding in face_encodings:
-                matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-                name = "Unknown"
-                confidence = "Unknown"
-
-                face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-                best_match_index = np.argmin(face_distances)
-
-                if matches[best_match_index]:
-                    name = known_face_names[best_match_index]
-                    confidence = face_confidence(face_distances[best_match_index])
-                    log_attendance(name, confidence)
-
-                face_names.append(f"{name} ({confidence})")
-
-            # Draw rectangles and labels
-            for (top, right, bottom, left), name in zip(face_locations, face_names):
-                top *= 4
-                right *= 4
-                bottom *= 4
-                left *= 4
-
-                cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-                cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), -1)
-                cv2.putText(frame, name, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.8, (255, 255, 255), 1)
-
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+def record_attendance(name):
+    try:
+        attendance_dir = 'static/attendance'
+        if not os.path.exists(attendance_dir):
+            os.makedirs(attendance_dir)
+        
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        current_time = datetime.now().strftime('%H:%M:%S')
+        attendance_file = os.path.join(attendance_dir, f'{current_date}.json')
+        
+        attendance_data = []
+        if os.path.exists(attendance_file):
+            with open(attendance_file, 'r') as f:
+                attendance_data = json.load(f)
+        
+        for entry in attendance_data:
+            if entry['name'] == name and entry['date'] == current_date:
+                print(f"Attendance already recorded for {name} today")
+                return
+        
+        new_record = {
+            'name': name,
+            'date': current_date,
+            'time': current_time
+        }
+        attendance_data.append(new_record)
+        
+        with open(attendance_file, 'w') as f:
+            json.dump(attendance_data, f, indent=4)
+        
+        print(f"Attendance recorded for {name} at {current_time}")
+    except Exception as e:
+        print(f"Error recording attendance: {str(e)}")
 
 @app.route('/')
 def index():
+    if not session.get('privacy_notice_accepted'):
+        return redirect(url_for('privacy_notice'))
     return render_template('index.html')
+
+@app.route('/privacy_notice', methods=['GET', 'POST'])
+def privacy_notice():
+    if request.method == 'POST':
+        session['privacy_notice_accepted'] = True
+        return redirect(url_for('index'))
+    return render_template('privacy_notice.html')
+
+@app.route('/set_privacy_notice', methods=['POST'])
+def set_privacy_notice():
+    session['privacy_notice_accepted'] = True
+    return jsonify({'success': True})
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/camera_issue')
-def camera_issue():
-    return render_template('camera_issue.html')
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form['name']
+        image = request.files['image']
+        
+        if name and image:
+            faces_dir = 'faces'
+            if not os.path.exists(faces_dir):
+                os.makedirs(faces_dir)
+            
+            image_path = os.path.join(faces_dir, f'{name}.jpg')
+            image.save(image_path)
+            print(f"Saved image to: {image_path}")
+            
+            image = face_recognition.load_image_file(image_path)
+            face_encodings = face_recognition.face_encodings(image)
+            
+            if face_encodings:
+                load_known_faces()
+                return render_template('register.html', success=True, name=name)
+            else:
+                os.remove(image_path)
+                return render_template('register.html', error="No face detected in the image")
+    
+    return render_template('register.html')
 
-@app.route('/qr_code')
-def qr_code():
-    return send_file("static/qr_code.png", mimetype="image/png")
+@app.route('/view_faces')
+def view_faces():
+    faces = []
+    faces_dir = 'faces'
+    if os.path.exists(faces_dir):
+        for filename in os.listdir(faces_dir):
+            if filename.endswith('.jpg'):
+                name = filename[:-4]
+                faces.append({
+                    'name': name,
+                    'image_path': url_for('serve_face', filename=filename)
+                })
+    return render_template('view_faces.html', faces=faces)
 
-# Generate a QR code for troubleshooting
-def generate_qr_code():
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
-    )
-    qr.add_data("https://support.google.com/chrome/answer/2693767?hl=en")  # Replace with actual troubleshooting link
-    qr.make(fit=True)
+@app.route('/attendance')
+def attendance():
+    attendance_data = []
+    attendance_dir = 'static/attendance'
+    if os.path.exists(attendance_dir):
+        for filename in os.listdir(attendance_dir):
+            if filename.endswith('.json'):
+                date = filename[:-5]
+                with open(os.path.join(attendance_dir, filename), 'r') as f:
+                    data = json.load(f)
+                    attendance_data.extend(data)
+    
+    attendance_data.sort(key=lambda x: (x['date'], x['time']), reverse=True)
+    return render_template('attendance.html', attendance=attendance_data)
 
-    img = qr.make_image(fill="black", back_color="white")
-    qr_path = "static/qr_code.png"
-    img.save(qr_path)
+@app.route('/faces/<filename>')
+def serve_face(filename):
+    return send_from_directory('faces', filename)
 
-generate_qr_code()  # Generate QR code on startup
-
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True) 
