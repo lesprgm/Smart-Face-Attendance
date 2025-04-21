@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const acceptBtn = document.getElementById('acceptBtn');
     const prefBtn = document.getElementById('prefBtn');
     
-    // Handle accept button click
     acceptBtn.addEventListener('click', function() {
         fetch('/set_privacy_notice', {
             method: 'POST',
@@ -21,9 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Handle preferences button click
     prefBtn.addEventListener('click', function() {
-        // For now, just accept and proceed
         fetch('/set_privacy_notice', {
             method: 'POST',
             headers: {
