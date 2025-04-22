@@ -17,12 +17,14 @@
         <div class="attendance-container">
             <h3>Recent Attendance</h3>
             <div class="attendance-list">
-                {% if records %}
-                    {% for record in records %}
+                {% if attendance %}
+                    {% for record in attendance %}
                         <div class="attendance-item">
-                            <strong>{{ record.name }}</strong> - {{ record.time }}
+                            <strong>{{ record.name }}</strong> 
+                            
                             <br>
-                            <small>Confidence: {{ record.confidence }}</small>
+                            Date: {{ record.date }}<br>
+                            Time: {{ record.time }}
                         </div>
                     {% endfor %}
                 {% else %}

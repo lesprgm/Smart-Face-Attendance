@@ -83,7 +83,7 @@ function stopVideoFeed() {
     captureBtn.style.display = 'none';
 }
 
-function captureImage() {
+/*function captureImage() {
     if (!isStreaming) {
         alert('Please start the video feed first');
         return;
@@ -112,7 +112,7 @@ function captureImage() {
             captureBtn.disabled = false;
             captureBtn.textContent = 'Capture Image';
         });
-}
+}*/
 
 function handleFileUpload(event) {
     const file = event.target.files[0];
@@ -175,9 +175,6 @@ document.addEventListener('DOMContentLoaded', function() {
         stopBtn.addEventListener('click', stopVideoFeed);
     }
 
-    if (captureBtn) {
-        captureBtn.addEventListener('click', captureImage);
-    }
 
     if (imageFile) {
         imageFile.addEventListener('change', handleFileUpload);
