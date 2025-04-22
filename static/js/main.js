@@ -52,7 +52,7 @@ function startVideoFeed() {
                 stopBtn.style.display = 'none';
             }
         } else {
-            console.log('Video feed streaming successfully');
+            console.log('Video streaming successfully');
             retryCount = 0;
             isStreaming = true;
         }
@@ -76,6 +76,8 @@ function stopVideoFeed() {
     videoFeed.src = "";
     isStreaming = false;
     retryCount = 0;
+
+    clearTimeout(checkStream);
     
     startBtn.style.display = 'inline-block';
     stopBtn.style.display = 'none';
