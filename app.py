@@ -9,6 +9,11 @@ import numpy as np
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+@app.route("/")
+def index():
+    return "Facial Recognition App is live! Visit /upload to use it."
+
+
 known_face_encodings = []
 known_face_names = []
 
