@@ -4,19 +4,19 @@ A Flask-based web application for real-time **student attendance tracking** usin
 
 ---
 
-## 🚀 Features
+##  Features
 
-- 🎥 Real-time face detection via webcam
-- 🧠 Face recognition using `face_recognition` (built on dlib)
-- 👥 Easy face registration with image preview
-- 📅 Attendance records with timestamps
-- 🖼️ View all registered faces
-- 🔐 Privacy notice page to inform users about data usage
-- 💻 Responsive Bootstrap UI with modern design
+- Real-time face detection via webcam
+-  Face recognition using `face_recognition` (built on dlib)
+-  Easy face registration with image preview
+-  Attendance records with timestamps
+-  View all registered faces
+-  Privacy notice page to inform users about data usage
+-  Responsive Bootstrap UI with modern design
 
 ---
 
-## 🗂️ Folder Structure
+## Folder Structure
 
 ```
 ├── app.py                     # Flask backend
@@ -99,7 +99,7 @@ Then open your browser and visit:
 
 ---
 
-## 🔐 Privacy by Design
+## Privacy by Design
 
 - Users are informed via a **dedicated privacy notice**
 - No images are stored permanently without consent
@@ -109,23 +109,31 @@ Then open your browser and visit:
 
 ## 🖼️ Screenshots
 
-> Add screenshots by placing them in a `/screenshots` folder and updating the links below.
 
+
+### Homepage
 ![Homepage Screenshot](screenshots/Homepage.jpg)
+
+### Register Face
 ![Register Face](screenshots/Register.jpg)
+
+### Attendance View
 ![Attendance View](screenshots/Attendance.jpg)
+
+### Faces View
+![Faces View](screenshots/Faces.jpg)
 
 ---
 
-## 🛑 Known Issues
+##  Known Issues
 
 This project may have unresolved bugs or limitations.  
 Please refer to the **[Issues](../../issues)** section of this repository for up-to-date details or to report new problems.
 
 ---
 
-## 📬 Credits
+##  Credits
 
 Developed by **Leslie Osei-Anane**  
-Face Recognition Logic: (https://www.)  
+Face Recognition Tutorial: (https://youtu.be/tl2eEBFEHqM?si=WZ4n19KU4zxzTZ91)  
 GitHub: [@lesprgm](https://github.com/lesprgm)
