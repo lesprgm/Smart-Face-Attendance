@@ -163,4 +163,49 @@ footer a:hover {
 footer .bi {
     font-size: 1.5rem;
 }
+
+.attendance-container {
+    margin: 40px auto;
+    max-width: 800px;
+  }
+  
+  .attendance-container h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #1f2937; 
+  }
+  
+  .attendance-list {
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden; 
+  }
+  
+  .attendance-item {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e5e7eb; 
+  }
+  
+  .attendance-item:last-child {
+    border-bottom: none;
+  }
+  
+  .attendance-item strong {
+    font-weight: 600;
+    color: #111827; 
+  }
+  
+  .attendance-item small {
+    display: block;
+    color: #6b7280; 
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  
+  
   
