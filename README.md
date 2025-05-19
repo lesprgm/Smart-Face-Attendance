@@ -22,18 +22,23 @@ A Flask-based web application for real-time **student attendance tracking** usin
 ├── app.py                     # Flask backend
 ├── face_recognition_system.py # Face recognition logic
 ├── templates/
-│   ├── index.html             # Home page with live feed
-│   ├── register.html          # Face registration form
-│   ├── view_faces.html        # List of registered faces
-│   ├── attendance.html        # View attendance records
-│   └── privacy_notice.html    # Privacy notice popup
+│   ├── index.html            # Home page with live feed
+│   ├── register.html         # Face registration form
+│   ├── view_faces.html       # List of registered faces
+│   ├── attendance.html       # View attendance records
+│   └── privacy_notice.html   # Privacy notice popup
 ├── static/
-│   ├── css/
-│   │   ├── style.css
-│   │   └── privacy_notice.css
-├── faces/                     # Stores uploaded face images
-├── attendance.csv             # (optional) Attendance logs
-├── requirements.txt           # Python dependencies
+│   ├── css/                  # CSS stylesheets
+│   ├── js/                   # JavaScript files
+│   └── attendance/           # Attendance-related static files
+├── faces/                    # Stores uploaded face images
+├── screenshots/              # Project screenshots
+├── Model/                    # Model files
+├── dlib/                     # dlib library files
+├── requirements.txt          # Python dependencies
+├── Dockerfile               # Docker configuration
+├── Procfile                 # Heroku configuration
+└── LICENSE                  # Project license
 ```
 
 ---
@@ -42,8 +47,11 @@ A Flask-based web application for real-time **student attendance tracking** usin
 
 - **Python 3.10+**
 - **Flask** – Web server
+- **Gunicorn** – Production WSGI server
 - **face_recognition** – Core face recognition engine
-- **OpenCV** – Image capture and processing
+- **OpenCV** (headless) – Image capture and processing
+- **NumPy** – Numerical computing
+- **Pandas** – Data manipulation and analysis
 - **Bootstrap 5** – Frontend styling
 
 ---
@@ -88,14 +96,16 @@ Then open your browser and visit:
 
 ## 📸 Functional Routes
 
-| Route         | Description                          |
-|---------------|--------------------------------------|
-| `/`           | Home page with live camera feed      |
-| `/register`   | Upload image and name to register    |
-| `/upload`     | Upload image for recognition         |
-| `/attendance` | View attendance logs                 |
-| `/view_faces` | See all registered faces             |
-| `/privacy`    | Read privacy notice                  |
+| Route                | Description                                    |
+|---------------------|------------------------------------------------|
+| `/`                 | Home page with live camera feed                |
+| `/privacy_notice`   | Privacy notice page (required before access)   |
+| `/set_privacy_notice` | API endpoint to accept privacy notice         |
+| `/video_feed`       | Live video stream endpoint                     |
+| `/register`         | Upload image and name to register face         |
+| `/view_faces`       | View all registered faces                      |
+| `/attendance`       | View attendance records                        |
+| `/faces/<filename>` | Serve registered face images                   |
 
 ---
 
