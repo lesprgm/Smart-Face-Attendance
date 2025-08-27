@@ -1,5 +1,6 @@
 let isStreaming = false;
 let retryCount = 0;
+let checkStream = null; // Declare at global scope so stopVideoFeed can access it
 const MAX_RETRIES = 3;
 
 function startVideoFeed() {
@@ -36,7 +37,7 @@ function startVideoFeed() {
         }
     };
     
-    const checkStream = setTimeout(() => {
+    checkStream = setTimeout(() => {
         if (videoFeed.naturalWidth === 0) {
             console.error('Video feed not streaming');
             stopVideoFeed();
@@ -59,7 +60,10 @@ function startVideoFeed() {
     }, 2000);
     
     videoFeed.onloadeddata = function() {
-        clearTimeout(checkStream);
+        if (checkStream) {
+            clearTimeout(checkStream);
+            checkStream = null;
+        }
         console.log('Video feed loaded successfully');
         retryCount = 0;
         isStreaming = true;
@@ -72,15 +76,40 @@ function stopVideoFeed() {
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     
+    // Clear any pending timeouts
+    if (checkStream) {
+        clearTimeout(checkStream);
+        checkStream = null;
+    }
+    
+    // Hide video container and clear video source
     videoContainer.style.display = 'none';
     videoFeed.src = "";
     isStreaming = false;
     retryCount = 0;
-
-    clearTimeout(checkStream);
     
+    // Reset button states
     startBtn.style.display = 'inline-block';
     stopBtn.style.display = 'none';
+    
+    // Call backend to properly release camera resources
+    fetch('/stop_video_feed', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Video feed stopped successfully');
+        } else {
+            console.error('Error stopping video feed:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error calling stop video feed:', error);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

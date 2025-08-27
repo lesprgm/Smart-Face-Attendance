@@ -155,6 +155,20 @@ def video_feed():
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
+@app.route('/stop_video_feed', methods=['POST'])
+def stop_video_feed():
+    """Stop the video feed and release camera resources"""
+    global video_capture
+    try:
+        if video_capture is not None:
+            video_capture.release()
+            video_capture = None
+            print("Video capture released successfully")
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error stopping video feed: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -175,10 +189,21 @@ def register():
             
             if face_encodings:
                 load_known_faces()
+                # Check if request expects JSON response
+                if request.headers.get('Content-Type') == 'application/json' or request.is_json:
+                    return jsonify({'success': True, 'name': name})
                 return render_template('register.html', success=True, name=name)
             else:
                 os.remove(image_path)
+                # Check if request expects JSON response
+                if request.headers.get('Content-Type') == 'application/json' or request.is_json:
+                    return jsonify({'success': False, 'error': "No face detected in the image"})
                 return render_template('register.html', error="No face detected in the image")
+        else:
+            # Check if request expects JSON response
+            if request.headers.get('Content-Type') == 'application/json' or request.is_json:
+                return jsonify({'success': False, 'error': "Name and image are required"})
+            return render_template('register.html', error="Name and image are required")
     
     return render_template('register.html')
 

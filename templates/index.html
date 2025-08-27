@@ -14,13 +14,13 @@
         <div class="container text-center">
             <h1 class="display-4 fw-bold">Class Attendance System</h1>
             <p class="lead">Real-time face detection and recognition</p>
-            <div class="video-container loading" id="videoContainer">
-                <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Video Feed">
+            <div class="video-container loading" id="videoContainer" style="display: none;">
+                <img src="" class="video-feed" alt="Video Feed">
             </div>
   
             <div class="d-flex justify-content-center gap-3 mt-4">
                 <button id="startBtn" class="btn btn-light btn-lg rounded-pill shadow">Start Camera</button>
-                <button id="stopBtn" class="btn btn-danger btn-lg rounded-pill shadow" style=display: none; >Stop Camera</button>
+                <button id="stopBtn" class="btn btn-danger btn-lg rounded-pill shadow" style="display: none;">Stop Camera</button>
             </div>
             <div class="nav-buttons d-flex justify-content-center gap-3 mt-4">
                 <a href="{{ url_for('register') }}" class="btn btn-outline-light rounded-pill">Register New Face</a>
