@@ -52,9 +52,16 @@ def get_video_capture():
     return video_capture
 
 def generate_frames():
+    global video_capture
     frame_count = 0
     while True:
-        video_capture = get_video_capture()
+        # Check if video_capture is None (manually stopped) before trying to get it
+        if video_capture is None:
+            break
+            
+        if not video_capture.isOpened():
+            break
+            
         ret, frame = video_capture.read()
         if not ret:
             break
@@ -152,6 +159,8 @@ def set_privacy_notice():
 
 @app.route('/video_feed')
 def video_feed():
+    # Initialize video capture when feed is requested
+    get_video_capture()
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
