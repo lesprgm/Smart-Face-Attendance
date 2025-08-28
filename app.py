@@ -6,6 +6,20 @@ import json
 import face_recognition
 import numpy as np
 
+# Constants
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 480
+FRAME_RESIZE_FACTOR = 0.5
+FRAME_SCALE_FACTOR = 2
+ATTENDANCE_CHECK_INTERVAL = 300  # seconds (5 minutes)
+FACES_DIRECTORY = 'faces'
+ATTENDANCE_DIRECTORY = 'static/attendance'
+SUPPORTED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png')
+RECTANGLE_COLOR = (0, 255, 0)  # Green
+RECTANGLE_THICKNESS = 2
+TEXT_COLOR = (255, 255, 255)  # White
+TEXT_SCALE = 0.5
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
@@ -18,14 +32,13 @@ def load_known_faces():
     known_face_encodings = []
     known_face_names = []
     
-    faces_dir = 'faces'
-    if not os.path.exists(faces_dir):
-        os.makedirs(faces_dir)
+    if not os.path.exists(FACES_DIRECTORY):
+        os.makedirs(FACES_DIRECTORY)
     
-    for filename in os.listdir(faces_dir):
-        if filename.endswith('.jpg'):
-            name = filename[:-4]
-            image_path = os.path.join(faces_dir, filename)
+    for filename in os.listdir(FACES_DIRECTORY):
+        if filename.endswith(SUPPORTED_IMAGE_EXTENSIONS):
+            name = filename[:-4]  # Remove extension
+            image_path = os.path.join(FACES_DIRECTORY, filename)
             print(f"Loading face: {image_path}")
             
             image = face_recognition.load_image_file(image_path)
@@ -47,8 +60,8 @@ def get_video_capture():
     global video_capture
     if video_capture is None:
         video_capture = cv2.VideoCapture(0)
-        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
     return video_capture
 
 def generate_frames():
@@ -70,16 +83,16 @@ def generate_frames():
         if frame_count % 2 != 0:
             continue
             
-        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        small_frame = cv2.resize(frame, (0, 0), fx=FRAME_RESIZE_FACTOR, fy=FRAME_RESIZE_FACTOR)
         rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_small_frame)
         face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
         
         for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-            top *= 2
-            right *= 2
-            bottom *= 2
-            left *= 2
+            top *= FRAME_SCALE_FACTOR
+            right *= FRAME_SCALE_FACTOR
+            bottom *= FRAME_SCALE_FACTOR
+            left *= FRAME_SCALE_FACTOR
             
             matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
             name = "Unknown"
@@ -90,15 +103,15 @@ def generate_frames():
                 
                 current_time = datetime.now()
                 if name not in last_attendance_check or \
-                   (current_time - last_attendance_check[name]).total_seconds() > 300:
+                   (current_time - last_attendance_check[name]).total_seconds() > ATTENDANCE_CHECK_INTERVAL:
                     record_attendance(name)
                     last_attendance_check[name] = current_time
                     print(f"Recording attendance for {name}")
             
-            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
-            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 255, 0), cv2.FILLED)
+            cv2.rectangle(frame, (left, top), (right, bottom), RECTANGLE_COLOR, RECTANGLE_THICKNESS)
+            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), RECTANGLE_COLOR, cv2.FILLED)
             font = cv2.FONT_HERSHEY_DUPLEX
-            cv2.putText(frame, name, (left + 6, bottom - 6), font, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, name, (left + 6, bottom - 6), font, TEXT_SCALE, TEXT_COLOR, 1)
         
         ret, buffer = cv2.imencode('.jpg', frame)
         frame = buffer.tobytes()
@@ -107,13 +120,12 @@ def generate_frames():
 
 def record_attendance(name):
     try:
-        attendance_dir = 'static/attendance'
-        if not os.path.exists(attendance_dir):
-            os.makedirs(attendance_dir)
+        if not os.path.exists(ATTENDANCE_DIRECTORY):
+            os.makedirs(ATTENDANCE_DIRECTORY)
         
         current_date = datetime.now().strftime('%Y-%m-%d')
         current_time = datetime.now().strftime('%H:%M:%S')
-        attendance_file = os.path.join(attendance_dir, f'{current_date}.json')
+        attendance_file = os.path.join(ATTENDANCE_DIRECTORY, f'{current_date}.json')
         
         attendance_data = []
         if os.path.exists(attendance_file):
@@ -185,11 +197,10 @@ def register():
         image = request.files['image']
         
         if name and image:
-            faces_dir = 'faces'
-            if not os.path.exists(faces_dir):
-                os.makedirs(faces_dir)
+            if not os.path.exists(FACES_DIRECTORY):
+                os.makedirs(FACES_DIRECTORY)
             
-            image_path = os.path.join(faces_dir, f'{name}.jpg')
+            image_path = os.path.join(FACES_DIRECTORY, f'{name}.jpg')
             image.save(image_path)
             print(f"Saved image to: {image_path}")
             
@@ -219,11 +230,10 @@ def register():
 @app.route('/view_faces')
 def view_faces():
     faces = []
-    faces_dir = 'faces'
-    if os.path.exists(faces_dir):
-        for filename in os.listdir(faces_dir):
-            if filename.endswith('.jpg'):
-                name = filename[:-4]
+    if os.path.exists(FACES_DIRECTORY):
+        for filename in os.listdir(FACES_DIRECTORY):
+            if filename.endswith(SUPPORTED_IMAGE_EXTENSIONS):
+                name = os.path.splitext(filename)[0]  # Remove extension properly
                 faces.append({
                     'name': name,
                     'image_path': url_for('serve_face', filename=filename)
@@ -233,12 +243,11 @@ def view_faces():
 @app.route('/attendance')
 def attendance():
     attendance_data = []
-    attendance_dir = 'static/attendance'
-    if os.path.exists(attendance_dir):
-        for filename in os.listdir(attendance_dir):
+    if os.path.exists(ATTENDANCE_DIRECTORY):
+        for filename in os.listdir(ATTENDANCE_DIRECTORY):
             if filename.endswith('.json'):
                 date = filename[:-5]
-                with open(os.path.join(attendance_dir, filename), 'r') as f:
+                with open(os.path.join(ATTENDANCE_DIRECTORY, filename), 'r') as f:
                     data = json.load(f)
                     attendance_data.extend(data)
     
@@ -247,7 +256,7 @@ def attendance():
 
 @app.route('/faces/<filename>')
 def serve_face(filename):
-    return send_from_directory('faces', filename)
+    return send_from_directory(FACES_DIRECTORY, filename)
 
 if __name__ == "__main__":
     import os
