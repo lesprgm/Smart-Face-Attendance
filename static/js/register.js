@@ -86,13 +86,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const captureBtn = document.getElementById('captureBtn');
+    
+    // Add debouncing for video buttons
+    let isProcessing = false;
 
     if (startBtn && window.VideoUtils) {
-        startBtn.addEventListener('click', () => VideoUtils.startVideoFeed(true));
+        startBtn.addEventListener('click', () => {
+            if (!isProcessing) {
+                isProcessing = true;
+                VideoUtils.startVideoFeed(true);
+                setTimeout(() => { isProcessing = false; }, 1000);
+            }
+        });
     }
 
     if (stopBtn && window.VideoUtils) {
-        stopBtn.addEventListener('click', VideoUtils.stopVideoFeed);
+        stopBtn.addEventListener('click', () => {
+            if (!isProcessing) {
+                isProcessing = true;
+                VideoUtils.stopVideoFeed();
+                setTimeout(() => { isProcessing = false; }, 500);
+            }
+        });
     }
 
     if (captureBtn && window.VideoUtils) {
@@ -129,4 +144,4 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     }
-}); 
+});

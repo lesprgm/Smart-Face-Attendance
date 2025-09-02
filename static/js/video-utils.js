@@ -2,8 +2,8 @@
 
 // Constants
 const MAX_RETRIES = 3;
-const STREAM_CHECK_TIMEOUT = 2000;
-const RETRY_DELAY = 1000;
+const STREAM_CHECK_TIMEOUT = 1500;  // Reduced from 2000ms to 1500ms for faster response
+const RETRY_DELAY = 800;            // Reduced from 1000ms to 800ms for quicker retries
 
 // Global state variables
 let isStreaming = false;
@@ -71,6 +71,7 @@ function resetVideoUI(elements) {
     }
     if (startBtn) {
         startBtn.style.display = 'inline-block';
+        startBtn.disabled = false; // Ensure button is enabled when stopped
     }
     if (stopBtn) {
         stopBtn.style.display = 'none';
@@ -97,11 +98,17 @@ function startVideoFeed(showCaptureButton = false) {
         return;
     }
     
-    // Update UI
-    videoContainer.style.display = 'block';
-    startBtn.style.display = 'none';
-    stopBtn.style.display = 'inline-block';
-    
+    // Immediately update UI for better responsiveness - prevent button glitching
+    if (startBtn) {
+        startBtn.disabled = true; // Prevent multiple clicks while starting
+        startBtn.style.display = 'none';
+    }
+    if (stopBtn) {
+        stopBtn.style.display = 'inline-block';
+    }
+    if (videoContainer) {
+        videoContainer.style.display = 'block';
+    }
     if (showCaptureButton && captureBtn) {
         captureBtn.style.display = 'inline-block';
     }
@@ -122,7 +129,11 @@ function startVideoFeed(showCaptureButton = false) {
         } else {
             showCameraErrorAlert('loading');
             retryCount = 0;
-            startBtn.style.display = 'inline-block';
+            // Re-enable start button after error
+            if (startBtn) {
+                startBtn.style.display = 'inline-block';
+                startBtn.disabled = false;
+            }
         }
     };
     
@@ -139,12 +150,20 @@ function startVideoFeed(showCaptureButton = false) {
             } else {
                 showCameraErrorAlert('streaming');
                 retryCount = 0;
-                startBtn.style.display = 'inline-block';
+                // Re-enable start button after error
+                if (startBtn) {
+                    startBtn.style.display = 'inline-block';
+                    startBtn.disabled = false;
+                }
             }
         } else {
             console.log('Video feed streaming successfully');
             retryCount = 0;
             isStreaming = true;
+            // Re-enable start button once streaming is confirmed
+            if (startBtn) {
+                startBtn.disabled = false;
+            }
         }
     }, STREAM_CHECK_TIMEOUT);
     
@@ -157,6 +176,10 @@ function startVideoFeed(showCaptureButton = false) {
         console.log('Video feed loaded successfully');
         retryCount = 0;
         isStreaming = true;
+        // Re-enable start button once video is loaded
+        if (startBtn) {
+            startBtn.disabled = false;
+        }
     };
 }
 

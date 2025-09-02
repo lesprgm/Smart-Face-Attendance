@@ -9,9 +9,10 @@ import numpy as np
 # Constants
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
-FRAME_RESIZE_FACTOR = 0.5
-FRAME_SCALE_FACTOR = 2
+FRAME_RESIZE_FACTOR = 0.25  # Reduced from 0.5 to 0.25 for faster processing
+FRAME_SCALE_FACTOR = 4      # Increased from 2 to 4 to match resize factor
 ATTENDANCE_CHECK_INTERVAL = 300  # seconds (5 minutes)
+FRAME_SKIP_RATE = 3         # Process every 3rd frame instead of every 2nd
 FACES_DIRECTORY = 'faces'
 ATTENDANCE_DIRECTORY = 'static/attendance'
 SUPPORTED_IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png')
@@ -80,9 +81,16 @@ def generate_frames():
             break
             
         frame_count += 1
-        if frame_count % 2 != 0:
+        # Process every 3rd frame instead of every 2nd to reduce processing load
+        if frame_count % FRAME_SKIP_RATE != 0:
+            # Still yield frames for display even when not processing faces
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
             continue
             
+        # Only do face recognition processing on every 3rd frame
         small_frame = cv2.resize(frame, (0, 0), fx=FRAME_RESIZE_FACTOR, fy=FRAME_RESIZE_FACTOR)
         rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_small_frame)
