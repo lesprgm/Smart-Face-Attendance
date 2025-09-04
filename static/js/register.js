@@ -86,26 +86,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     const captureBtn = document.getElementById('captureBtn');
-    
-    // Add debouncing for video buttons
-    let isProcessing = false;
 
     if (startBtn && window.VideoUtils) {
         startBtn.addEventListener('click', () => {
-            if (!isProcessing) {
-                isProcessing = true;
+            // Only proceed if button is not disabled (simple debouncing)
+            if (!startBtn.disabled) {
                 VideoUtils.startVideoFeed(true);
-                setTimeout(() => { isProcessing = false; }, 1000);
             }
         });
     }
 
     if (stopBtn && window.VideoUtils) {
         stopBtn.addEventListener('click', () => {
-            if (!isProcessing) {
-                isProcessing = true;
+            // Only proceed if button is not disabled (simple debouncing)
+            if (!stopBtn.disabled) {
                 VideoUtils.stopVideoFeed();
-                setTimeout(() => { isProcessing = false; }, 500);
             }
         });
     }
