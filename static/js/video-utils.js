@@ -71,10 +71,11 @@ function resetVideoUI(elements) {
     }
     if (startBtn) {
         startBtn.style.display = 'inline-block';
-        startBtn.disabled = false; // Ensure button is enabled when stopped
+        startBtn.disabled = false; // Ensure button is enabled and ready to click
     }
     if (stopBtn) {
         stopBtn.style.display = 'none';
+        stopBtn.disabled = false; // Reset stop button state
     }
     if (captureBtn) {
         captureBtn.style.display = 'none';
@@ -98,6 +99,12 @@ function startVideoFeed(showCaptureButton = false) {
         return;
     }
     
+    // Prevent multiple simultaneous start attempts
+    if (isStreaming) {
+        console.log('Video feed already streaming');
+        return;
+    }
+    
     // Immediately update UI for better responsiveness - prevent button glitching
     if (startBtn) {
         startBtn.disabled = true; // Prevent multiple clicks while starting
@@ -105,6 +112,7 @@ function startVideoFeed(showCaptureButton = false) {
     }
     if (stopBtn) {
         stopBtn.style.display = 'inline-block';
+        stopBtn.disabled = false; // Ensure stop button is enabled
     }
     if (videoContainer) {
         videoContainer.style.display = 'block';
@@ -120,7 +128,6 @@ function startVideoFeed(showCaptureButton = false) {
     // Handle video loading errors
     videoFeed.onerror = function() {
         console.error('Error loading video feed');
-        stopVideoFeed();
         
         if (retryCount < MAX_RETRIES) {
             retryCount++;
@@ -129,11 +136,8 @@ function startVideoFeed(showCaptureButton = false) {
         } else {
             showCameraErrorAlert('loading');
             retryCount = 0;
-            // Re-enable start button after error
-            if (startBtn) {
-                startBtn.style.display = 'inline-block';
-                startBtn.disabled = false;
-            }
+            // Reset UI to initial state on final failure
+            stopVideoFeed();
         }
     };
     
@@ -141,7 +145,6 @@ function startVideoFeed(showCaptureButton = false) {
     checkStream = setTimeout(() => {
         if (videoFeed.naturalWidth === 0) {
             console.error('Video feed not streaming');
-            stopVideoFeed();
             
             if (retryCount < MAX_RETRIES) {
                 retryCount++;
@@ -150,20 +153,13 @@ function startVideoFeed(showCaptureButton = false) {
             } else {
                 showCameraErrorAlert('streaming');
                 retryCount = 0;
-                // Re-enable start button after error
-                if (startBtn) {
-                    startBtn.style.display = 'inline-block';
-                    startBtn.disabled = false;
-                }
+                // Reset UI to initial state on final failure
+                stopVideoFeed();
             }
         } else {
             console.log('Video feed streaming successfully');
             retryCount = 0;
             isStreaming = true;
-            // Re-enable start button once streaming is confirmed
-            if (startBtn) {
-                startBtn.disabled = false;
-            }
         }
     }, STREAM_CHECK_TIMEOUT);
     
@@ -176,10 +172,6 @@ function startVideoFeed(showCaptureButton = false) {
         console.log('Video feed loaded successfully');
         retryCount = 0;
         isStreaming = true;
-        // Re-enable start button once video is loaded
-        if (startBtn) {
-            startBtn.disabled = false;
-        }
     };
 }
 
@@ -195,12 +187,19 @@ function stopVideoFeed() {
         checkStream = null;
     }
     
-    // Reset state
+    // Reset state immediately to prevent button glitching
     isStreaming = false;
     retryCount = 0;
     
-    // Update UI
+    // Update UI immediately for better responsiveness
     resetVideoUI(elements);
+    
+    // Clear video source to stop the stream immediately
+    if (elements.videoFeed) {
+        elements.videoFeed.src = "";
+        elements.videoFeed.onerror = null;
+        elements.videoFeed.onloadeddata = null;
+    }
     
     // Call backend to properly release camera resources
     fetch('/stop_video_feed', {

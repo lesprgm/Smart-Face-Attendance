@@ -4,27 +4,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const startBtn = document.getElementById('startBtn');
     const stopBtn = document.getElementById('stopBtn');
     
-    // Add debouncing to prevent rapid button clicks
-    let isProcessing = false;
-    
     if (startBtn) {
         startBtn.addEventListener('click', () => {
-            if (!isProcessing) {
-                isProcessing = true;
+            // Only proceed if button is not disabled (simple debouncing)
+            if (!startBtn.disabled) {
                 VideoUtils.startVideoFeed(false);
-                // Reset processing flag after a short delay
-                setTimeout(() => { isProcessing = false; }, 1000);
             }
         });
     }
     
     if (stopBtn) {
         stopBtn.addEventListener('click', () => {
-            if (!isProcessing) {
-                isProcessing = true;
+            // Only proceed if button is not disabled (simple debouncing) 
+            if (!stopBtn.disabled) {
                 VideoUtils.stopVideoFeed();
-                // Reset processing flag after a short delay
-                setTimeout(() => { isProcessing = false; }, 500);
             }
         });
     }
