@@ -1,139 +1,47 @@
-let isStreaming = false;
-let retryCount = 0;
-const MAX_RETRIES = 3;
+// Register page JavaScript - handles file upload functionality
 
-function startVideoFeed() {
-    const videoContainer = document.getElementById('videoContainer');
-    const videoFeed = document.querySelector('.video-feed');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const captureBtn = document.getElementById('captureBtn');
-    
-    videoContainer.style.display = 'block';
-    startBtn.style.display = 'none';
-    stopBtn.style.display = 'inline-block';
-    captureBtn.style.display = 'inline-block';
-    
-    const timestamp = new Date().getTime();
-    videoFeed.src = "{{ url_for('video_feed') }}?t=" + timestamp;
-    
-    videoFeed.onerror = function() {
-        console.error('Error loading video feed');
-        stopVideoFeed();
-        
-        if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            console.log(`Retrying video feed (attempt ${retryCount}/${MAX_RETRIES})...`);
-            setTimeout(startVideoFeed, 1000);
-        } else {
-            alert('Error loading video feed. Please check:\n\n' +
-                  '1. Your camera is connected and working\n' +
-                  '2. Camera permissions are granted in your browser\n' +
-                  '3. No other application is using the camera\n' +
-                  '4. Try refreshing the page and allowing camera access\n' +
-                  '5. If using a laptop, make sure the camera is not covered');
-            retryCount = 0;
-            startBtn.style.display = 'inline-block';
-        }
-    };
-    
-    const checkStream = setTimeout(() => {
-        if (videoFeed.naturalWidth === 0) {
-            console.error('Video feed not streaming');
-            stopVideoFeed();
-            
-            if (retryCount < MAX_RETRIES) {
-                retryCount++;
-                console.log(`Retrying video feed (attempt ${retryCount}/${MAX_RETRIES})...`);
-                setTimeout(startVideoFeed, 1000);
-            } else {
-                alert('Camera not responding. Please check your camera connection and permissions.');
-                retryCount = 0;
-                startBtn.style.display = 'inline-block';
-            }
-        } else {
-            console.log('Video feed streaming successfully');
-            retryCount = 0;
-            isStreaming = true;
-        }
-    }, 2000);
-    
-    videoFeed.onloadeddata = function() {
-        clearTimeout(checkStream);
-        console.log('Video feed loaded successfully');
-        retryCount = 0;
-        isStreaming = true;
-    };
-}
-
-function stopVideoFeed() {
-    const videoContainer = document.getElementById('videoContainer');
-    const videoFeed = document.querySelector('.video-feed');
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const captureBtn = document.getElementById('captureBtn');
-    
-    videoContainer.style.display = 'none';
-    videoFeed.src = "";
-    isStreaming = false;
-    retryCount = 0;
-    
-    startBtn.style.display = 'inline-block';
-    stopBtn.style.display = 'none';
-    captureBtn.style.display = 'none';
-}
-
-/*function captureImage() {
-    if (!isStreaming) {
-        alert('Please start the video feed first');
-        return;
-    }
-
-    const captureBtn = document.getElementById('captureBtn');
-    captureBtn.disabled = true;
-    captureBtn.textContent = 'Capturing...';
-
-    fetch('/capture')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const previewContainer = document.getElementById('previewContainer');
-                previewContainer.style.display = 'block';
-                document.getElementById('previewImage').src = data.image_url;
-            } else {
-                alert('Failed to capture image: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error capturing image:', error);
-            alert('Error capturing image. Please try again.');
-        })
-        .finally(() => {
-            captureBtn.disabled = false;
-            captureBtn.textContent = 'Capture Image';
-        });
-}*/
-
+/**
+ * Handles file upload preview
+ * @param {Event} event - File input change event
+ */
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const preview = document.getElementById('uploadPreview');
-            const uploadedImage = document.getElementById('uploadedImage');
-            preview.style.display = 'block';
-            uploadedImage.src = e.target.result;
+            const preview = document.getElementById('uploadPreview') || document.getElementById('imagePreview');
+            const uploadedImage = document.getElementById('uploadedImage') || preview;
+            
+            if (preview) {
+                preview.style.display = 'block';
+                preview.classList.remove('d-none');
+                if (uploadedImage && uploadedImage !== preview) {
+                    uploadedImage.src = e.target.result;
+                } else if (preview.tagName === 'IMG') {
+                    preview.src = e.target.result;
+                }
+            }
         };
         reader.readAsDataURL(file);
     }
 }
 
+/**
+ * Handles form submission for face registration
+ * @param {Event} event - Form submit event
+ */
 function handleUploadSubmit(event) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
     const submitBtn = form.querySelector('button[type="submit"]');
     
+    if (!submitBtn) {
+        console.error('Submit button not found');
+        return;
+    }
+    
+    const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.textContent = 'Registering...';
 
@@ -156,31 +64,79 @@ function handleUploadSubmit(event) {
     })
     .finally(() => {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Register Face';
+        submitBtn.textContent = originalText;
     });
 }
 
+// Only initialize if elements exist (for compatibility with different register page versions)
 document.addEventListener('DOMContentLoaded', function() {
-    const startBtn = document.getElementById('startBtn');
-    const stopBtn = document.getElementById('stopBtn');
-    const captureBtn = document.getElementById('captureBtn');
-    const imageFile = document.getElementById('imageFile');
-    const uploadForm = document.getElementById('uploadForm');
-
-    if (startBtn) {
-        startBtn.addEventListener('click', startVideoFeed);
-    }
-
-    if (stopBtn) {
-        stopBtn.addEventListener('click', stopVideoFeed);
-    }
-
-
+    // File upload handling
+    const imageFile = document.getElementById('imageFile') || document.getElementById('image');
     if (imageFile) {
         imageFile.addEventListener('change', handleFileUpload);
     }
 
+    // Form submission handling
+    const uploadForm = document.getElementById('uploadForm') || document.getElementById('registerForm');
     if (uploadForm) {
         uploadForm.addEventListener('submit', handleUploadSubmit);
     }
-}); 
+    
+    // Video functionality (if elements exist for advanced register page)
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const captureBtn = document.getElementById('captureBtn');
+
+    if (startBtn && window.VideoUtils) {
+        startBtn.addEventListener('click', () => {
+            // Only proceed if button is not disabled (simple debouncing)
+            if (!startBtn.disabled) {
+                VideoUtils.startVideoFeed(true);
+            }
+        });
+    }
+
+    if (stopBtn && window.VideoUtils) {
+        stopBtn.addEventListener('click', () => {
+            // Only proceed if button is not disabled (simple debouncing)
+            if (!stopBtn.disabled) {
+                VideoUtils.stopVideoFeed();
+            }
+        });
+    }
+
+    if (captureBtn && window.VideoUtils) {
+        captureBtn.addEventListener('click', function() {
+            if (!VideoUtils.getStreamingStatus()) {
+                alert('Please start the video feed first');
+                return;
+            }
+
+            captureBtn.disabled = true;
+            captureBtn.textContent = 'Capturing...';
+
+            fetch('/capture')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const previewContainer = document.getElementById('previewContainer');
+                        const previewImage = document.getElementById('previewImage');
+                        if (previewContainer && previewImage) {
+                            previewContainer.style.display = 'block';
+                            previewImage.src = data.image_url;
+                        }
+                    } else {
+                        alert('Failed to capture image: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error capturing image:', error);
+                    alert('Error capturing image. Please try again.');
+                })
+                .finally(() => {
+                    captureBtn.disabled = false;
+                    captureBtn.textContent = 'Capture Image';
+                });
+        });
+    }
+});
